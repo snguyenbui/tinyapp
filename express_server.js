@@ -18,7 +18,7 @@ const generateRandomString = () => {
   while (output.length < 6) {
 
     //Generating code point value between 0 and 122
-    let codePoint = Math.floor(Math.random()*1000)
+    let codePoint = Math.floor(Math.random() * 1000);
     if (codePoint > 122) {
       codePoint = Math.floor(codePoint / 10);
     }
@@ -30,7 +30,7 @@ const generateRandomString = () => {
   }
 
   return output;
-}
+};
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -61,10 +61,15 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+app.post("/urls/:id", (req, res) => {
+  urlDatabase[req.params.id] = req.body.id;
+  res.redirect("/urls");
+});
+
 app.post("/urls/:shortURL/delete", (req,res) => {
   delete urlDatabase[req.params.shortURL];
   res.redirect("/urls");
-})
+});
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
