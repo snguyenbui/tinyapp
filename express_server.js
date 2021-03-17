@@ -13,6 +13,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+const userDatabase = {
+  "userID" : {
+    id: "userID",
+    email: "example@domain.com",
+    password: "password"
+  },
+  "userID2" : {
+    id: "userID",
+    email: "example2@domain.com",
+    password: "password"
+  }
+}
+
 // In order to simulate generating a "unique" shortURL, for now we will implement a function that returns a string of 6 random alphanumeric characters:
 const generateRandomString = () => {
 
@@ -39,18 +52,37 @@ app.get("/", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
   res.redirect("/urls");
 })
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
+  res.redirect("/urls");
+})
+
+app.get("/register", (req, res) => {
+  const templateVars = {
+    userDatabase: userDatabase,
+    userID: "user_id"
+  };
+  res.render("user_registration", templateVars)
+})
+
+app.post("/register", (req, res) => {
+  const userID = generateRandomString();
+  userDatabase[userID] = {
+    id: userID,
+    email: req.body.email,
+    password: req.body.password
+  }
+  res.cookie("user_id", userID);
   res.redirect("/urls");
 })
 
 app.get("/urls", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    userDatabase: userDatabase,
+    userID: req.cookies["user_id"],
     urls: urlDatabase
   };
   res.render("urls_index", templateVars);
@@ -64,7 +96,8 @@ app.post("/urls", (req, res) => {
 
 app.get("/urls/new", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    userDatabase: userDatabase,
+    userID: req.cookies["user_id"]
   };
   res.render("urls_new", templateVars);
 });
@@ -76,7 +109,8 @@ app.get("/u/:shortURL", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
-    username: req.cookies["username"], 
+    userDatabase: userDatabase,
+    userID: req.cookies["user_id"],
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL] 
   };
