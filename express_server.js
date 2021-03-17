@@ -47,6 +47,15 @@ const generateRandomString = () => {
   return output;
 };
 
+const emailCheck = (email) => {
+  for (user in userDatabase) {
+    if (userDatabase[user].email === email) {
+      return true;
+    }
+  }
+  return false;
+}
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -69,14 +78,22 @@ app.get("/register", (req, res) => {
 })
 
 app.post("/register", (req, res) => {
-  const userID = generateRandomString();
-  userDatabase[userID] = {
-    id: userID,
-    email: req.body.email,
-    password: req.body.password
+  if (emailCheck(req.body.email)) {
+    res.send("Error 400: email already registered");
   }
-  res.cookie("user_id", userID);
-  res.redirect("/urls");
+
+  if (req.body.email !== "" && req.body.password !== "") {
+    const userID = generateRandomString();
+    userDatabase[userID] = {
+      id: userID,
+      email: req.body.email,
+      password: req.body.password
+    } 
+    res.cookie("user_id", userID);
+    res.redirect("/urls");
+  } else {
+    res.send("Error 400: email and password cannot be blank");
+  }
 })
 
 app.get("/urls", (req, res) => {
