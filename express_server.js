@@ -24,7 +24,7 @@ const userDatabase = {
     email: "example2@domain.com",
     password: "password"
   }
-}
+};
 
 // In order to simulate generating a "unique" shortURL, for now we will implement a function that returns a string of 6 random alphanumeric characters:
 const generateRandomString = () => {
@@ -47,14 +47,14 @@ const generateRandomString = () => {
   return output;
 };
 
-const emailCheck = (email) => {
-  for (user in userDatabase) {
+const findUserByEmail = (email) => {
+  for (let user in userDatabase) {
     if (userDatabase[user].email === email) {
-      return true;
+      return userDatabase[user];
     }
   }
-  return false;
-}
+  return '';
+};
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -66,18 +66,24 @@ app.get("/login", (req, res) => {
     userID: "user_id"
   };
   res.render("user_login", templateVars);
-})
+});
 
 app.post("/login", (req, res) => {
-  if (emailCheck(req.body.email)) {
-    res.redirect("/urls")
+  const login = findUserByEmail(req.body.email);
+  if (login.email !== req.body.email) {
+    res.send("Error 403: Email not found");
   }
-})
+  if (login.password !== req.body.password) {
+    res.send("Error 403: Incorrect password");
+  }
+  res.cookie("user_id", login.id);
+  res.redirect("/urls");
+});
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   res.redirect("/urls");
-})
+});
 
 
 app.get("/register", (req, res) => {
@@ -85,11 +91,11 @@ app.get("/register", (req, res) => {
     userDatabase: userDatabase,
     userID: "user_id"
   };
-  res.render("user_registration", templateVars)
-})
+  res.render("user_registration", templateVars);
+});
 
 app.post("/register", (req, res) => {
-  if (emailCheck(req.body.email)) {
+  if (findUserByEmail(req.body.email).email === req.body.email) {
     res.send("Error 400: email already registered");
   }
 
@@ -99,13 +105,13 @@ app.post("/register", (req, res) => {
       id: userID,
       email: req.body.email,
       password: req.body.password
-    } 
+    };
     res.cookie("user_id", userID);
     res.redirect("/urls");
   } else {
     res.send("Error 400: email and password cannot be blank");
   }
-})
+});
 
 app.get("/urls", (req, res) => {
   const templateVars = {
@@ -136,11 +142,11 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { 
+  const templateVars = {
     userDatabase: userDatabase,
     userID: req.cookies["user_id"],
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL] 
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.params.shortURL]
   };
   res.render("urls_show", templateVars);
 });
