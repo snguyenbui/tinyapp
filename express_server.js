@@ -60,14 +60,25 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
+app.get("/login", (req, res) => {
+  const templateVars = {
+    userDatabase: userDatabase,
+    userID: "user_id"
+  };
+  res.render("user_login", templateVars);
+})
+
 app.post("/login", (req, res) => {
-  res.redirect("/urls");
+  if (emailCheck(req.body.email)) {
+    res.redirect("/urls")
+  }
 })
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   res.redirect("/urls");
 })
+
 
 app.get("/register", (req, res) => {
   const templateVars = {

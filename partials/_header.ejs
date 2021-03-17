@@ -11,8 +11,10 @@
       </div>
     </div>
     <% if (!userDatabase[userID]) { %>
-      <form action="/login" method="POST">
-        <input type="text" name="username" id="username" value="Username">
+      <form action="/register" method="GET">
+        <input class="btn btn-primary" type="submit" value="Register">
+      </form>
+      <form action="/login" method="GET">
         <input class="btn btn-primary" type="submit" value="Login">
       </form>
     <% } %>
