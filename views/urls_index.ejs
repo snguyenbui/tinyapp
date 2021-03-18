@@ -31,7 +31,7 @@
             <td><%= urls[url].longURL %></td>
             <td><%= urls[url].dateCreated %></td>
             <td><%= urls[url].visits %></td>
-            <td><%= urls[url].uniqueVisits %></td>
+            <td><%= urls[url].uniqueVisits.length %></td>
             <td>
               <form action="/urls/<%= url %>/delete?_method=DELETE" method="POST">
               <input type="submit" value="Delete" class="btn btn-outline-danger">

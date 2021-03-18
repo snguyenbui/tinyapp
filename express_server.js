@@ -121,7 +121,7 @@ app.post("/urls", (req, res) => {
 
   if (req.session.user_id) {
     const newShortURL = generateRandomString();
-    urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id, dateCreated: new Date, visits: 0, uniqueVisits: 0 };
+    urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id, dateCreated: new Date, visits: 0, uniqueVisits: [] };
     res.redirect("/urls/" + newShortURL);
   } else {
     res.send("Please log in before trying to create a new short URL");
@@ -152,9 +152,9 @@ app.get("/u/:shortURL", (req, res) => {
     const longURL = urlDatabase[req.params.shortURL].longURL;
     urlDatabase[req.params.shortURL].visits++;
     
-    if (!req.session.visitor_id) {
-      urlDatabase[req.params.shortURL].uniqueVisits++;
+    if (urlDatabase[req.params.shortURL].uniqueVisits.indexOf(req.session.visitor_id) === -1) {
       req.session.visitor_id = generateRandomString();
+      urlDatabase[req.params.shortURL].uniqueVisits.push(req.session.visitor_id);
     }
     
     request(longURL, (error) => {
