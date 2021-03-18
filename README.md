@@ -14,8 +14,11 @@ Keep track of how many people interact with your links and see how viral it's ge
 
 Sign up with multiple emails to keep your URLs organized between different accounts (Multiple account sign in is not supported so you need to log out to switch accounts)
 
+##### Main page 
 !["Main URLs page"](https://github.com/snguyenbui/tinyapp/blob/master/docs/myURL_main_page.png)
-["New short URL ready to share"](https://github.com/snguyenbui/tinyapp/blob/master/docs/shortURL.png)
+
+##### New URL page
+!["New short URL ready to share"](https://github.com/snguyenbui/tinyapp/blob/master/docs/shortURL.png)
 
 ## Dependencies
 
