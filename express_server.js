@@ -140,7 +140,7 @@ app.get("/u/:shortURL", (req, res) => {
 
   const longURL = urlDatabase[req.params.shortURL].longURL;
   urlDatabase[req.params.shortURL].visits++;
-  if (!req.session.visitor_id || !req.session.user_id) {
+  if (!req.session.visitor_id) {
     urlDatabase[req.params.shortURL].uniqueVisits++;
     req.session.visitor_id = generateRandomString();
   }
