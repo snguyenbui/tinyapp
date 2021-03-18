@@ -146,22 +146,26 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/u/:shortURL", (req, res) => {
   
-  const longURL = urlDatabase[req.params.shortURL].longURL;
-  urlDatabase[req.params.shortURL].visits++;
-  
-  if (!req.session.visitor_id) {
-    urlDatabase[req.params.shortURL].uniqueVisits++;
-    req.session.visitor_id = generateRandomString();
-  }
-  
-  request(longURL, (error) => {
-    if (error) {
-      res.send("Invalid URL");
-    } else {
-      res.redirect(longURL);
+  if (urlDatabase[req.params.shortURL] === undefined) {
+    res.send("Invalid short URL");
+  } else { 
+    const longURL = urlDatabase[req.params.shortURL].longURL;
+    urlDatabase[req.params.shortURL].visits++;
+    
+    if (!req.session.visitor_id) {
+      urlDatabase[req.params.shortURL].uniqueVisits++;
+      req.session.visitor_id = generateRandomString();
     }
-  });
-  
+    
+    request(longURL, (error) => {
+      if (error) {
+        res.send("Invalid URL");
+      } else {
+        res.redirect(longURL);
+      }
+    });
+  }
+    
 });
 
 app.get("/urls/:shortURL", (req, res) => {
