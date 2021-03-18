@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const bcrypt = require('bcrypt');
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
@@ -56,8 +57,22 @@ const findUserByEmail = (email) => {
   return '';
 };
 
+const urlsForUser = (id) => {
+  const userURLs = {};
+  for (let short in urlDatabase) {
+    if (urlDatabase[short].userID === id) {
+      userURLs[short] = urlDatabase[short];
+    }
+  }
+  return userURLs;
+};
+
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  if (!req.cookies["user_id"]) {
+    res.redirect("/login");
+  } else {
+    res.redirect("/urls");
+  }
 });
 
 app.get("/login", (req, res) => {
@@ -73,7 +88,7 @@ app.post("/login", (req, res) => {
   if (login.email !== req.body.email) {
     res.send("Error 403: Email not found");
   }
-  if (login.password !== req.body.password) {
+  if (!bcrypt.compareSync(req.body.password, login.password)) {
     res.send("Error 403: Incorrect password");
   }
   res.cookie("user_id", login.id);
@@ -100,11 +115,13 @@ app.post("/register", (req, res) => {
 
   if (req.body.email !== "" && req.body.password !== "") {
     const userID = generateRandomString();
+    const hashedPass = bcrypt.hashSync(req.body.password, 10);
     userDatabase[userID] = {
       id: userID,
       email: req.body.email,
-      password: req.body.password
+      password: hashedPass
     };
+    console.log(userDatabase)
     res.cookie("user_id", userID);
     res.redirect("/urls");
   } else {
@@ -116,7 +133,7 @@ app.get("/urls", (req, res) => {
   const templateVars = {
     userDatabase: userDatabase,
     userID: req.cookies["user_id"],
-    urls: urlDatabase
+    urls: urlsForUser(req.cookies["user_id"])
   };
   res.render("urls_index", templateVars);
 });
@@ -151,16 +168,24 @@ app.get("/urls/:shortURL", (req, res) => {
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL
   };
-  res.render("urls_show", templateVars);
+  if (urlsForUser(req.cookies["user_id"])[req.params.shortURL]) {
+    res.render("urls_show", templateVars);
+  } else {
+    res.send("That short URL does not belong to you or you're not logged in");
+  }
 });
 
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.id;
+  if (urlsForUser(req.cookies["user_id"])[req.params.shortURL]) {
+    urlDatabase[req.params.id].longURL = req.body.longURL;
+  }
   res.redirect("/urls");
 });
 
 app.post("/urls/:shortURL/delete", (req,res) => {
-  delete urlDatabase[req.params.shortURL];
+  if (urlsForUser(req.cookies["user_id"])[req.params.shortURL]) {
+    delete urlDatabase[req.params.shortURL];
+  }
   res.redirect("/urls");
 });
 
