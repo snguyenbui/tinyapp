@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
+const methodOverride = require("method-override");
 const { findUserByEmail, generateRandomString, urlsForUser } = require("./helpers");
 const bcrypt = require('bcrypt');
 const app = express();
@@ -8,6 +9,7 @@ const PORT = 8080; // default port 8080
 
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(methodOverride("_method"));
 app.use(cookieSession({
   name: "session",
   keys: ["key1", "key2"]
@@ -23,47 +25,62 @@ const userDatabase = {
 };
 
 app.get("/", (req, res) => {
+
   if (!req.session.user_id) {
     res.redirect("/login");
   } else {
     res.redirect("/urls");
   }
+
 });
 
 app.get("/login", (req, res) => {
+
   const templateVars = {
     userDatabase: userDatabase,
     userID: "user_id"
   };
+
   res.render("user_login", templateVars);
+
 });
 
 app.post("/login", (req, res) => {
+
   const login = findUserByEmail(req.body.email, userDatabase);
+
   if (login.email !== req.body.email) {
     res.send("Error 403: Email not found");
   }
+
   if (!bcrypt.compareSync(req.body.password, login.password)) {
     res.send("Error 403: Incorrect password");
   }
+
   req.session.user_id = login.id;
   res.redirect("/urls");
+
 });
 
 app.post("/logout", (req, res) => {
+
   req.session = null;
   res.redirect("/urls");
+
 });
 
 app.get("/register", (req, res) => {
+
   const templateVars = {
     userDatabase: userDatabase,
     userID: "user_id"
   };
+
   res.render("user_registration", templateVars);
 });
 
 app.post("/register", (req, res) => {
+
   if (findUserByEmail(req.body.email, userDatabase) !== undefined) {
     res.send("Error 400: email already registered");
   }
@@ -81,72 +98,96 @@ app.post("/register", (req, res) => {
   } else {
     res.send("Error 400: email and password cannot be blank");
   }
+
 });
 
 app.get("/urls", (req, res) => {
+
   const templateVars = {
     userDatabase: userDatabase,
     userID: req.session.user_id,
     urls: urlsForUser(req.session.user_id, urlDatabase)
   };
+
   res.render("urls_index", templateVars);
+
 });
 
 app.post("/urls", (req, res) => {
+
   const newShortURL = generateRandomString();
   urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id };
   res.redirect("/urls/" + newShortURL);
+
 });
 
 app.get("/urls/new", (req, res) => {
+
   const templateVars = {
     userDatabase: userDatabase,
     userID: req.session.user_id
   };
+
   if (!req.session.user_id) {
     res.redirect("/login");
   } else {
     res.render("urls_new", templateVars);
   }
+
 });
 
 app.get("/u/:shortURL", (req, res) => {
+
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
+
 });
 
 app.get("/urls/:shortURL", (req, res) => {
+
   const templateVars = {
     userDatabase: userDatabase,
     userID: req.session.user_id,
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL
   };
+
   if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
     res.render("urls_show", templateVars);
   } else {
     res.send("That short URL does not belong to you or you're not logged in");
   }
+
 });
 
-app.post("/urls/:id", (req, res) => {
-  if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
+app.put("/urls/:id", (req, res) => {
+
+  if (urlsForUser(req.session.user_id, urlDatabase)) {
     urlDatabase[req.params.id].longURL = req.body.longURL;
   }
+
   res.redirect("/urls");
+
 });
 
-app.post("/urls/:shortURL/delete", (req,res) => {
-  if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
+app.delete("/urls/:shortURL/delete", (req,res) => {
+
+  if (urlsForUser(req.session.user_id, urlDatabase).shortURL === req.body.shortURL) {
     delete urlDatabase[req.params.shortURL];
   }
+
   res.redirect("/urls");
+
 });
 
 app.get("/urls.json", (req, res) => {
+
   res.json(urlDatabase);
+
 });
 
 app.listen(PORT, () => {
+
   console.log(`Example app listening on port ${PORT}!`);
+
 });
