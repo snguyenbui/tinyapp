@@ -116,7 +116,7 @@ app.get("/urls", (req, res) => {
 app.post("/urls", (req, res) => {
 
   const newShortURL = generateRandomString();
-  urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id };
+  urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id, dateCreated: new Date, visits: 0, uniqueVisits: 0 };
   res.redirect("/urls/" + newShortURL);
 
 });
@@ -139,6 +139,11 @@ app.get("/urls/new", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
 
   const longURL = urlDatabase[req.params.shortURL].longURL;
+  urlDatabase[req.params.shortURL].visits++;
+  if (!req.session.visitor_id || !req.session.user_id) {
+    urlDatabase[req.params.shortURL].uniqueVisits++;
+    req.session.visitor_id = generateRandomString();
+  }
   res.redirect(longURL);
 
 });
@@ -149,7 +154,10 @@ app.get("/urls/:shortURL", (req, res) => {
     userDatabase: userDatabase,
     userID: req.session.user_id,
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL
+    longURL: urlDatabase[req.params.shortURL].longURL,
+    dateCreated: urlDatabase[req.params.shortURL].dateCreated,
+    visits: urlDatabase[req.params.shortURL].visits,
+    uniqueVisits: urlDatabase[req.params.shortURL].uniqueVisits
   };
 
   if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
