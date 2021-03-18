@@ -1,9 +1,10 @@
-const express = require("express");
+const bcrypt = require('bcrypt');
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
+const express = require("express");
 const methodOverride = require("method-override");
+const request = require('request');
 const { findUserByEmail, generateRandomString, urlsForUser } = require("./helpers");
-const bcrypt = require('bcrypt');
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -51,14 +52,12 @@ app.post("/login", (req, res) => {
 
   if (login.email !== req.body.email) {
     res.send("Error 403: Email not found");
-  }
-
-  if (!bcrypt.compareSync(req.body.password, login.password)) {
+  } else if (!bcrypt.compareSync(req.body.password, login.password)) {
     res.send("Error 403: Incorrect password");
+  } else {
+    req.session.user_id = login.id;
+    res.redirect("/urls");
   }
-
-  req.session.user_id = login.id;
-  res.redirect("/urls");
 
 });
 
@@ -76,7 +75,12 @@ app.get("/register", (req, res) => {
     userID: "user_id"
   };
 
-  res.render("user_registration", templateVars);
+  if (req.session.user_id) {
+    res.redirect("/urls");
+  } else {
+    res.render("user_registration", templateVars);
+  }
+
 });
 
 app.post("/register", (req, res) => {
@@ -115,9 +119,13 @@ app.get("/urls", (req, res) => {
 
 app.post("/urls", (req, res) => {
 
-  const newShortURL = generateRandomString();
-  urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id, dateCreated: new Date, visits: 0, uniqueVisits: 0 };
-  res.redirect("/urls/" + newShortURL);
+  if (req.session.user_id) {
+    const newShortURL = generateRandomString();
+    urlDatabase[newShortURL] = { longURL: req.body.longURL, userID: req.session.user_id, dateCreated: new Date, visits: 0, uniqueVisits: 0 };
+    res.redirect("/urls/" + newShortURL);
+  } else {
+    res.send("Please log in before trying to create a new short URL");
+  }
 
 });
 
@@ -137,15 +145,23 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-
+  
   const longURL = urlDatabase[req.params.shortURL].longURL;
   urlDatabase[req.params.shortURL].visits++;
+  
   if (!req.session.visitor_id) {
     urlDatabase[req.params.shortURL].uniqueVisits++;
     req.session.visitor_id = generateRandomString();
   }
-  res.redirect(longURL);
-
+  
+  request(longURL, (error) => {
+    if (error) {
+      res.send("Invalid URL");
+    } else {
+      res.redirect(longURL);
+    }
+  });
+  
 });
 
 app.get("/urls/:shortURL", (req, res) => {
@@ -170,8 +186,14 @@ app.get("/urls/:shortURL", (req, res) => {
 
 app.put("/urls/:id", (req, res) => {
 
+  if (!req.session.user_id) {
+    res.send("Please log in before editting the source URL");
+  }
+
   if (urlsForUser(req.session.user_id, urlDatabase)) {
     urlDatabase[req.params.id].longURL = req.body.longURL;
+  } else {
+    res.send("You can only edit URLs registered to your account");
   }
 
   res.redirect("/urls");
@@ -180,8 +202,14 @@ app.put("/urls/:id", (req, res) => {
 
 app.delete("/urls/:shortURL/delete", (req,res) => {
 
+  if (!req.session.user_id) {
+    res.send("Please log in before editting the source URL");
+  }
+
   if (urlsForUser(req.session.user_id, urlDatabase).shortURL === req.body.shortURL) {
     delete urlDatabase[req.params.shortURL];
+  } else {
+    res.send("You can only delete URLs registered to your account");
   }
 
   res.redirect("/urls");
