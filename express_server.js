@@ -42,7 +42,11 @@ app.get("/login", (req, res) => {
     userID: "user_id"
   };
 
-  res.render("user_login", templateVars);
+  if (req.session_user_id) {
+    res.redirect("/url");
+  } else {
+    res.render("user_login", templateVars);
+  }
 
 });
 
@@ -50,21 +54,25 @@ app.post("/login", (req, res) => {
 
   const login = findUserByEmail(req.body.email, userDatabase);
 
-  if (login.email !== req.body.email) {
-    res.send("Error 403: Email not found");
-  } else if (!bcrypt.compareSync(req.body.password, login.password)) {
-    res.send("Error 403: Incorrect password");
+  if (login !== undefined){
+    if (login.email !== req.body.email) {
+      res.send("Error 403: Email not found");
+    } else if (!bcrypt.compareSync(req.body.password, login.password)) {
+      res.send("Error 403: Incorrect password");
+    } else {
+      req.session.user_id = login.id;
+      res.redirect("/urls");
+    }
   } else {
-    req.session.user_id = login.id;
-    res.redirect("/urls");
+    res.send("Error 403: Email not found");
   }
-
+    
 });
 
 app.post("/logout", (req, res) => {
 
   req.session = null;
-  res.redirect("/urls");
+  res.redirect("/login");
 
 });
 
@@ -87,20 +95,20 @@ app.post("/register", (req, res) => {
 
   if (findUserByEmail(req.body.email, userDatabase) !== undefined) {
     res.send("Error 400: email already registered");
-  }
-
-  if (req.body.email !== "" && req.body.password !== "") {
-    const userID = generateRandomString();
-    const hashedPass = bcrypt.hashSync(req.body.password, 10);
-    userDatabase[userID] = {
-      id: userID,
-      email: req.body.email,
-      password: hashedPass
-    };
-    req.session.user_id = userID;
-    res.redirect("/urls");
   } else {
-    res.send("Error 400: email and password cannot be blank");
+    if (req.body.email !== "" && req.body.password !== "") {
+      const userID = generateRandomString();
+      const hashedPass = bcrypt.hashSync(req.body.password, 10);
+      userDatabase[userID] = {
+        id: userID,
+        email: req.body.email,
+        password: hashedPass
+      };
+      req.session.user_id = userID;
+      res.redirect("/urls");
+    } else {
+      res.send("Error 400: email and password cannot be blank");
+    }
   }
 
 });
@@ -113,7 +121,11 @@ app.get("/urls", (req, res) => {
     urls: urlsForUser(req.session.user_id, urlDatabase)
   };
 
-  res.render("urls_index", templateVars);
+  if (req.session.user_id) {
+    res.render("urls_index", templateVars);
+  } else {
+    res.send("Error, not currently signed in")
+  }
 
 });
 
@@ -174,16 +186,20 @@ app.get("/urls/:shortURL", (req, res) => {
     userDatabase: userDatabase,
     userID: req.session.user_id,
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL,
-    dateCreated: urlDatabase[req.params.shortURL].dateCreated,
-    visits: urlDatabase[req.params.shortURL].visits,
-    uniqueVisits: urlDatabase[req.params.shortURL].uniqueVisits
   };
 
-  if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
-    res.render("urls_show", templateVars);
-  } else {
+  if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL] === undefined) {
     res.send("That short URL does not belong to you or you're not logged in");
+  } else {
+    if (urlsForUser(req.session.user_id, urlDatabase)[req.params.shortURL]) {
+      templateVars.longURL = urlDatabase[req.params.shortURL].longURL,
+      templateVars.dateCreated = urlDatabase[req.params.shortURL].dateCreated,
+      templateVars.visits = urlDatabase[req.params.shortURL].visits,
+      templateVars.uniqueVisits = urlDatabase[req.params.shortURL].uniqueVisits
+      res.render("urls_show", templateVars);
+    } else {
+      res.send("That short URL does not belong to you or you're not logged in");
+    }
   }
 
 });
@@ -192,15 +208,14 @@ app.put("/urls/:id", (req, res) => {
 
   if (!req.session.user_id) {
     res.send("Please log in before editting the source URL");
+  } else { 
+    if (urlsForUser(req.session.user_id, urlDatabase)) {
+      urlDatabase[req.params.id].longURL = req.body.longURL;
+      res.redirect("/urls");
+    } else {
+      res.send("You can only edit URLs registered to your account");
+    }
   }
-
-  if (urlsForUser(req.session.user_id, urlDatabase)) {
-    urlDatabase[req.params.id].longURL = req.body.longURL;
-  } else {
-    res.send("You can only edit URLs registered to your account");
-  }
-
-  res.redirect("/urls");
 
 });
 
@@ -208,15 +223,15 @@ app.delete("/urls/:shortURL/delete", (req,res) => {
 
   if (!req.session.user_id) {
     res.send("Please log in before editting the source URL");
-  }
-
-  if (urlsForUser(req.session.user_id, urlDatabase).shortURL === req.body.shortURL) {
-    delete urlDatabase[req.params.shortURL];
   } else {
-    res.send("You can only delete URLs registered to your account");
+    if (urlsForUser(req.session.user_id, urlDatabase).shortURL === req.body.shortURL) {
+      res.redirect("/urls");
+      delete urlDatabase[req.params.shortURL];
+    } else {
+      res.send("You can only delete URLs registered to your account");
+    }
   }
 
-  res.redirect("/urls");
 
 });
 
